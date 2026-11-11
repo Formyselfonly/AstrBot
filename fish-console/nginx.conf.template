@@ -1,12 +1,26 @@
+# Default vhost: refuse unknown Host headers (apex / other domains on same IP).
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 444;
+}
+
 server {
     listen 80;
     listen [::]:80;
-    server_name _;
+    server_name ${FISH_SITE_HOST} ${FISH_EXTRA_SERVER_NAMES};
 
     root /usr/share/nginx/html;
     index index.html;
 
     client_max_body_size 16m;
+
+    location = /health {
+        proxy_pass http://fish-api:8800/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
 
     location /api/ {
         proxy_pass http://fish-api:8800;

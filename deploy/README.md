@@ -26,8 +26,9 @@ chmod +x scripts/docker-prod-up.sh
 
 ```bash
 ./scripts/docker-prod-up.sh ps
-curl -fsS http://127.0.0.1:8080/health
 curl -fsSI http://127.0.0.1:8080/ | head -n1
+# fish-api health is not under /api; check inside the container or via exec:
+docker exec dafeiyu-fish-api curl -fsS http://127.0.0.1:8800/health
 ```
 
 首次 `up --build` 会较久（**astrbot** 镜像最大）。失败时在本机直接 `docker compose … logs` / 改 Dockerfile 再构建，比 SSH 省事。
@@ -43,7 +44,24 @@ curl -fsSI http://127.0.0.1:8080/ | head -n1
 ## 前置（服务器）
 
 - 服务器已装 [Docker](https://docs.docker.com/engine/install/) 与 Compose 插件
-- 域名 A 记录指向服务器（HTTPS 可在宿主机再套 Caddy/Nginx，或把 443 反代到 `FISH_HTTP_PORT`）
+- **根域还有别的服务时**：不要把 Compose 直接绑在 `0.0.0.0:80`（会抢走所有域名的 80 流量）。默认 `FISH_BIND_ADDRESS=127.0.0.1`、`FISH_HTTP_PORT=8080`，由宿主机 **Caddy/Nginx 按子域分流**。
+- Cloudflare：仅 **`fish` 子域** A 记录指向本机（或与反代一致）；**`@` 根域** 指向 Pages / 另一台机 / 另一反代 upstream，不要和鱼咖抢同一裸 `:80` Docker 映射。
+
+### 子域 + 根域共存（示例）
+
+| DNS | 指向 |
+| --- | --- |
+| `fish.kerryzhengai.com` | 本机公网 IP（橙云可开） |
+| `kerryzhengai.com` (`@`) | 其他服务（Pages、另一 IP 等） |
+
+宿主机 Caddy（443）示意：
+
+```text
+fish.kerryzhengai.com  → reverse_proxy 127.0.0.1:8080
+kerryzhengai.com       → 你的主站 upstream
+```
+
+`deploy/.env` 中 `FISH_SITE_HOST=fish.kerryzhengai.com`；Nginx 容器会 **拒绝** 用根域 Host 访问鱼咖（避免误配时根域打开登录页）。
 
 ## 步骤（服务器）
 
@@ -59,7 +77,7 @@ docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
 
 | 端口 | 说明 |
 | --- | --- |
-| `${FISH_HTTP_PORT:-80}` | 用户中心 + `/api` |
+| `${FISH_BIND_ADDRESS}:${FISH_HTTP_PORT}`（默认 `127.0.0.1:8080`） | 用户中心 + `/api`（经宿主机反代对外） |
 | `127.0.0.1:6185` | 运营后台（仅本机；SSH 隧道或内网 Nginx 访问） |
 
 ## 首次必做
@@ -73,7 +91,7 @@ docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
 
 ## HTTPS（宿主机反代示例）
 
-Nginx/Caddy 监听 443，反代到 `http://127.0.0.1:80`（或你设的 `FISH_HTTP_PORT`），证书用 certbot 或 Caddy 自动申请。勿把 6185 直接暴露到公网。
+Caddy/Nginx 监听 443，**仅 `fish` 子域** 反代到 `http://127.0.0.1:${FISH_HTTP_PORT}`。勿把 6185 直接暴露到公网。
 
 ## 数据卷
 

@@ -62,8 +62,11 @@ services:
     image: dafeiyu-fish-console:local
     container_name: dafeiyu-web
     restart: unless-stopped
+    environment:
+      FISH_SITE_HOST: ${FISH_SITE_HOST:?set FISH_SITE_HOST e.g. fish.kerryzhengai.com}
+      FISH_EXTRA_SERVER_NAMES: ${FISH_EXTRA_SERVER_NAMES:-}
     ports:
-      - "${FISH_HTTP_PORT:-80}:80"
+      - "${FISH_BIND_ADDRESS:-127.0.0.1}:${FISH_HTTP_PORT:-8080}:80"
     depends_on:
       fish-api:
         condition: service_healthy
