@@ -1,3 +1,5 @@
+deploy/.env
+
 # Python related
 __pycache__
 .mypy_cache
