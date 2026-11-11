@@ -198,9 +198,19 @@ Ollama 默认只监听 `127.0.0.1` 时，从容器仍可能连不上。在宿主
 docker exec dafeiyu-astrbot curl -sS http://host.docker.internal:11434/api/tags | head
 ```
 
+鱼咖 Nginx 反代 `fish-api` 时若只重启了 `fish-api` 未重启 `dafeiyu-web`，可能出现 **`/api/*` 502**（Nginx 仍指向旧容器 IP）。先 `docker restart dafeiyu-web`；仓库 `fish-console/nginx.conf.template` 已用 Docker DNS 动态解析，重建 `web` 镜像后长期可避免。
+
 ## 常用命令
 
 ```bash
+cd /opt/dafeiyu   # 服务器上仓库路径按实际调整
+
+# 重启全套（引擎 + fish-api + web + console-proxy）
+docker compose --env-file deploy/.env -f compose.prod.yml --profile console-proxy restart
+
+# 对外域名走 Cloudflare Tunnel 时，Tunnel 不在 Compose 里，需单独：
+sudo systemctl restart cloudflared
+
 docker compose --env-file deploy/.env -f compose.prod.yml ps
 docker compose --env-file deploy/.env -f compose.prod.yml logs -f fish-api
 docker compose --env-file deploy/.env -f compose.prod.yml up -d --build web   # 仅改 VITE_* 后重建前台

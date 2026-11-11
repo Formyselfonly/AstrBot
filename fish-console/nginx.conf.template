@@ -16,14 +16,18 @@ server {
 
     client_max_body_size 16m;
 
+    # Docker embedded DNS: re-resolve fish-api after container recreate (avoids stale IP 502).
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $fish_api_upstream fish-api:8800;
+
     location = /health {
-        proxy_pass http://fish-api:8800/health;
+        proxy_pass http://$fish_api_upstream/health;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
     }
 
     location /api/ {
-        proxy_pass http://fish-api:8800;
+        proxy_pass http://$fish_api_upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
