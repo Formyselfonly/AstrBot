@@ -159,14 +159,16 @@ cd fish-console && pnpm dev
 
 首次：`fish-api` 执行 `cp -n .env.example .env`；`fish-console` 执行 `cp -n .env.example .env` 并 `pnpm install`。
 
-### 服务器 Docker 全套（生产）
+### Docker 全套（与生产同 compose）
+
+**先本地、后服务器**（同一 `compose.prod.yml`）：
 
 ```bash
-cp deploy/.env.example deploy/.env   # 改域名、JWT、管理员邮箱等
-docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
+cp deploy/.env.local.example deploy/.env   # 本地：8080 + 127.0.0.1
+./scripts/docker-prod-up.sh                # 服务器：改 deploy/.env 后同样一条命令
 ```
 
-步骤与 HTTPS、OpenAPI Key 说明见 **[deploy/README.md](./deploy/README.md)**。
+生产域名与 HTTPS 见 **[deploy/README.md](./deploy/README.md)**。
 
 ---
 
