@@ -188,6 +188,16 @@ Caddy/Nginx 监听 443，**仅 `fish` 子域** 反代到 `http://127.0.0.1:${FIS
 
 备份这两个卷对应的数据目录（`docker volume inspect` 查路径）。
 
+### 宿主机 Ollama（Embedding）
+
+`compose.prod.yml` 为 `astrbot` 配置了 `host.docker.internal:host-gateway`。在运营台把 Ollama Embedding 的 API 地址设为 **`http://host.docker.internal:11434`**，不要用 `localhost`（容器内的 localhost 不是 VPS）。
+
+Ollama 默认只监听 `127.0.0.1` 时，从容器仍可能连不上。在宿主机为 Ollama 开放对 Docker 网桥的访问，例如 systemd 覆盖里设置 `OLLAMA_HOST=0.0.0.0:11434`，重启 Ollama 后验证：
+
+```bash
+docker exec dafeiyu-astrbot curl -sS http://host.docker.internal:11434/api/tags | head
+```
+
 ## 常用命令
 
 ```bash
