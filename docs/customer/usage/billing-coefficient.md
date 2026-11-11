@@ -43,7 +43,7 @@ icon: calculator
 ## 托管方技术说明（给你自己）
 
 - 服务器上 **真实成本** 用 AstrBot Token 成本控制按模型定价计算（与干饭记录同源单价表）。
-- **对客户展示** 在 fish-api 乘 `FISH_USAGE_DISPLAY_MULTIPLIER`（默认 2）并换成白饭克数；不把充值折扣 `TOPUP_CREDIT_RATIO` 叠进用量。
+- **对客户展示** 在 fish-api 乘 `FISH_USAGE_DISPLAY_MULTIPLIER`（默认 1）并换成白饭克数；不把充值折扣 `TOPUP_CREDIT_RATIO` 叠进用量。
 - 按客户过滤：`umo` 前缀 = 该客户的 `umo_prefix` / `adapter_id`。
 
 [返回用量页说明](dashboard.md) · [FAQ](../support/faq.md)

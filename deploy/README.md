@@ -89,7 +89,91 @@ docker compose --env-file deploy/.env -f compose.prod.yml up -d --build
    ```
 3. **QQ 出口 IP**：把 `FISH_QQ_EGRESS_IP` 设为服务器公网 IPv4，并在 QQ 开放平台填入白名单。
 
-## HTTPS（宿主机反代示例）
+## 对外访问：VPS 的 443 已被 3x-ui / Xray 占用
+
+鱼咖 Docker 默认只监听 `127.0.0.1:${FISH_HTTP_PORT}`，**不要**和 Xray 抢 443。推荐 **Cloudflare Tunnel（cloudflared）**：由隧道出站连 Cloudflare，把 `fish.你的域名` 指到本机 `http://127.0.0.1:8080`，**3x-ui 配置不用改**。
+
+### Cloudflare Tunnel 步骤（fish.kerryzhengai.com 示例）
+
+在 VPS 上执行（需已 `docker compose` 跑通且 `curl -H "Host: fish..." http://127.0.0.1:8080/` 为 200）：
+
+```bash
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+  -o /usr/local/bin/cloudflared
+chmod +x /usr/local/bin/cloudflared
+
+cloudflared tunnel login
+# 浏览器选 kerryzhengai.com 域名授权
+
+cloudflared tunnel create dafeiyu-fish
+# 记下输出的 Tunnel UUID
+```
+
+创建 `/etc/cloudflared/config.yml`（把 `TUNNEL_UUID` 换成上一步 UUID）：
+
+```yaml
+tunnel: TUNNEL_UUID
+credentials-file: /root/.cloudflared/TUNNEL_UUID.json
+
+ingress:
+  - hostname: fish.kerryzhengai.com
+    service: http://127.0.0.1:8080
+  - service: http_status:404
+```
+
+```bash
+cloudflared tunnel route dns dafeiyu-fish fish.kerryzhengai.com
+cloudflared service install
+systemctl enable --now cloudflared
+systemctl status cloudflared
+```
+
+**DNS：** `tunnel route dns` 会在 Cloudflare 创建/更新 `fish` 的 CNAME。请**删掉**旧的 `fish` → VPS IP 的 **A 记录**，避免和 Tunnel 冲突（根域 `@` 和其它子域不动）。
+
+**fish `deploy/.env`：**
+
+```env
+FISH_PUBLIC_URL=https://fish.kerryzhengai.com
+FISH_SITE_HOST=fish.kerryzhengai.com
+FISH_CORS_ORIGINS=https://fish.kerryzhengai.com
+```
+
+Cloudflare 控制台 **SSL/TLS** 用默认即可（Tunnel 自带 HTTPS）。QQ 白名单仍填 **VPS 公网 IP**（机器人出站不走 Tunnel）。
+
+### 运营控制台外网访问（HTTP 基本认证 + Tunnel）
+
+在 **同一 Tunnel** 里加一条 ingress（示例子域 `ops`），指向本机 **6186**（`console-proxy` 容器，不是裸 6185）：
+
+```yaml
+ingress:
+  - hostname: fish.kerryzhengai.com
+    service: "http://127.0.0.1:8080"
+  - hostname: ops.kerryzhengai.com
+    service: "http://127.0.0.1:6186"
+  - service: http_status:404
+```
+
+```bash
+cloudflared tunnel route dns dafeiyu-fish ops.kerryzhengai.com
+```
+
+**服务器 `deploy/.env`**（仅你这台机器改，勿提交 Git）：
+
+```env
+CONSOLE_PROXY_USER=kerryzheng
+CONSOLE_PROXY_PASSWORD=你的门禁密码
+CONSOLE_PROXY_PORT=6186
+```
+
+```bash
+docker compose --env-file deploy/.env -f compose.prod.yml --profile console-proxy up -d --build
+systemctl restart cloudflared
+```
+
+浏览器打开 `https://ops.kerryzhengai.com` → 先弹 **HTTP 基本认证**（用户 `kerryzheng` + 上面密码）→ 再进 AstrBot **运营台自己的登录**（`data/cmd_config.json` 账号）。  
+不要用弱密码长期暴露；基本认证不能代替运营台强密码。
+
+### 备选：宿主机 Caddy 反代（仅当 443 未被 Xray 占用时）
 
 Caddy/Nginx 监听 443，**仅 `fish` 子域** 反代到 `http://127.0.0.1:${FISH_HTTP_PORT}`。勿把 6185 直接暴露到公网。
 

@@ -73,6 +73,27 @@ services:
     networks:
       - dafeiyu
 
+  # Optional: external ops UI via Tunnel — docker compose --profile console-proxy …
+  console-proxy:
+    profiles:
+      - console-proxy
+    build:
+      context: ./deploy/console-proxy
+      dockerfile: Dockerfile
+    image: dafeiyu-console-proxy:local
+    container_name: dafeiyu-console-proxy
+    restart: unless-stopped
+    environment:
+      CONSOLE_PROXY_USER: ${CONSOLE_PROXY_USER:-kerryzheng}
+      CONSOLE_PROXY_PASSWORD: ${CONSOLE_PROXY_PASSWORD:?set CONSOLE_PROXY_PASSWORD in deploy/.env}
+    ports:
+      - "127.0.0.1:${CONSOLE_PROXY_PORT:-6186}:80"
+    depends_on:
+      astrbot:
+        condition: service_started
+    networks:
+      - dafeiyu
+
 volumes:
   astrbot_data:
   fish_api_data:

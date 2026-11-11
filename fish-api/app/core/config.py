@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     topup_credit_ratio: float = 0.5
     min_topup_yuan: float = 1.0
     # User-facing usage markup on real model USD cost (only this, not topup ratio).
-    usage_display_multiplier: float = 2.0
+    usage_display_multiplier: float = 1.0
     # USD → CNY for usage→白饭 (align with cost_control exchange_rates.CNY).
     usd_cny_rate: float = 7.2
     # User-facing: grams per 1 Alipay pay-yuan (not per internal APIKEY yuan).
