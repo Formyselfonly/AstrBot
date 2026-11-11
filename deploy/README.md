@@ -173,6 +173,8 @@ systemctl restart cloudflared
 浏览器打开 `https://ops.kerryzhengai.com` → 先弹 **HTTP 基本认证**（用户 `kerryzheng` + 上面密码）→ 再进 AstrBot **运营台自己的登录**（`data/cmd_config.json` 账号）。  
 不要用弱密码长期暴露；基本认证不能代替运营台强密码。
 
+`console-proxy` 对 **`/assets/`** 不做 Basic Auth（上游 WebUI 的 `crossorigin` 脚本不会带 `Authorization`，否则门禁通过后也会 **白屏**）。改 `deploy/console-proxy/nginx.conf.template` 后需 `--build` 重建 `console-proxy`。
+
 ### 备选：宿主机 Caddy 反代（仅当 443 未被 Xray 占用时）
 
 Caddy/Nginx 监听 443，**仅 `fish` 子域** 反代到 `http://127.0.0.1:${FISH_HTTP_PORT}`。勿把 6185 直接暴露到公网。
